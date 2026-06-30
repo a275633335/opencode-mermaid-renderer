@@ -1,7 +1,7 @@
 {
   "name": "opencode-mermaid-renderer",
-  "version": "0.2.0",
-  "description": "Render mermaid diagrams in OpenCode — generates local HTML file for browser viewing",
+  "version": "0.2.1",
+  "description": "Render mermaid diagrams in OpenCode — local browser viewing, fully offline",
   "keywords": [
     "opencode",
     "plugin",
@@ -27,15 +27,14 @@
   "main": "index.ts",
   "files": [
     "index.ts",
+    "vendor/",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "mermaid": "^11"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "@opencode-ai/plugin": ">=0.13.7"
   },

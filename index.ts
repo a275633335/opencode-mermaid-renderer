@@ -4,7 +4,9 @@ import { join, dirname } from "node:path"
 import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 
-// ── Output directory ────────────────────────────────────────────────────
+// ── Paths ───────────────────────────────────────────────────────────────
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const VENDOR_MERMAID = join(__dirname, "vendor", "mermaid.min.js")
 const OUTPUT_DIR = join(homedir(), ".opencode-mermaid-html")
 
 // ── Regex ───────────────────────────────────────────────────────────────
@@ -17,7 +19,11 @@ export const MermaidRenderer: Plugin = async () => {
     mkdirSync(OUTPUT_DIR, { recursive: true })
   }
 
-  ensureLocalMermaid()
+  // One-time: copy bundled mermaid.min.js into output dir
+  const dest = join(OUTPUT_DIR, "mermaid.min.js")
+  if (!existsSync(dest) && existsSync(VENDOR_MERMAID)) {
+    copyFileSync(VENDOR_MERMAID, dest)
+  }
 
   return {
     "experimental.text.complete": async (
@@ -35,47 +41,6 @@ export const MermaidRenderer: Plugin = async () => {
       }
     },
   } as Hooks
-}
-
-// ── Find + cache local mermaid.js ───────────────────────────────────────
-
-let mermaidAvailable = false
-
-function ensureLocalMermaid(): void {
-  const dest = join(OUTPUT_DIR, "mermaid.min.js")
-  if (existsSync(dest)) {
-    mermaidAvailable = true
-    return
-  }
-
-  const src = findMermaidJs()
-  if (src) {
-    copyFileSync(src, dest)
-    mermaidAvailable = true
-  }
-}
-
-function findMermaidJs(): string | null {
-  try {
-    const entry = import.meta.resolve("mermaid")
-    const entryPath = fileURLToPath(entry)
-    const distDir = dirname(entryPath)
-    const minJs = join(distDir, "mermaid.min.js")
-    if (existsSync(minJs)) return minJs
-  } catch {}
-
-  const candidates: string[] = []
-  if (process.env.APPDATA) {
-    candidates.push(join(process.env.APPDATA, "npm", "node_modules", "mermaid", "dist", "mermaid.min.js"))
-  }
-  candidates.push("/usr/local/lib/node_modules/mermaid/dist/mermaid.min.js")
-  candidates.push(join(homedir(), "node_modules", "mermaid", "dist", "mermaid.min.js"))
-  candidates.push(join(homedir(), ".bun", "install", "global", "node_modules", "mermaid", "dist", "mermaid.min.js"))
-
-  for (const p of candidates) {
-    if (existsSync(p)) return p
-  }
-  return null
 }
 
 // ── Block processing ────────────────────────────────────────────────────
@@ -118,23 +83,13 @@ function writeMermaidHtml(mermaidCode: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
 
-  const mermaidScript = mermaidAvailable
-    ? `\n  <script src="mermaid.min.js"></script>`
-    : ""
-  const setupHint = mermaidAvailable
-    ? ""
-    : `<div class="setup-hint">
-  <p><strong>需要先安装 mermaid 本地渲染引擎（仅需一次）：</strong></p>
-  <pre><code>npm install -g mermaid</code></pre>
-  <p>安装后重新生成图表即可，无需网络。</p>
-</div>`
-
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mermaid Diagram</title>${mermaidScript}
+<title>Mermaid Diagram</title>
+<script src="mermaid.min.js"></script>
 <style>
   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
   body{display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:24px;background:#fff;color:#1a1a1a;font-family:system-ui,-apple-system,sans-serif}
@@ -143,12 +98,9 @@ function writeMermaidHtml(mermaidCode: string): string {
   .toolbar{position:fixed;top:12px;right:12px;z-index:100;display:flex;gap:8px}
   .toolbar button{padding:6px 14px;border:1px solid #d0d0d0;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#333}
   .toolbar button:hover{background:#f0f0f0;border-color:#aaa}
-  .setup-hint{margin:60px auto;padding:24px 32px;border:2px dashed #ff9800;border-radius:8px;background:#fff8e1;max-width:500px;font-size:15px;line-height:1.8}
-  .setup-hint pre{margin:8px 0;padding:8px 12px;background:#263238;color:#aed581;border-radius:4px;font-size:14px}
 </style>
 </head>
 <body>
-${setupHint}
 <div class="toolbar">
   <button onclick="toggleTheme()" title="切换暗色/亮色主题">🌓 主题</button>
   <button onclick="downloadSVG()" title="下载为 SVG 文件">📥 SVG</button>
