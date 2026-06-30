@@ -1,13 +1,12 @@
 {
   "name": "opencode-mermaid-renderer",
   "version": "0.1.0",
-  "description": "Render mermaid diagrams as beautiful ASCII art in OpenCode (with CJK fix)",
+  "description": "Render mermaid diagrams in OpenCode — generates local HTML file for browser viewing",
   "keywords": [
     "opencode",
     "plugin",
     "mermaid",
     "diagram",
-    "ascii",
     "flowchart",
     "sequence-diagram",
     "state-diagram",
@@ -28,7 +27,6 @@
   "main": "index.ts",
   "files": [
     "index.ts",
-    "vendor/",
     "LICENSE",
     "README.md"
   ],
@@ -36,8 +34,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "beautiful-mermaid": "file:./vendor/beautiful-mermaid",
-    "@dagrejs/dagre": "^1.1.4",
     "mermaid": "^11"
   },
   "peerDependencies": {

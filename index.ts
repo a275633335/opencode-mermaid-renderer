@@ -1,5 +1,4 @@
 import type { Plugin, Hooks } from "@opencode-ai/plugin"
-import { renderMermaidAscii } from "./vendor/beautiful-mermaid/index.js"
 import { writeFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { homedir } from "node:os"
@@ -18,7 +17,6 @@ export const MermaidRenderer: Plugin = async () => {
     mkdirSync(OUTPUT_DIR, { recursive: true })
   }
 
-  // One-time: copy mermaid.min.js into output dir from global install
   ensureLocalMermaid()
 
   return {
@@ -55,20 +53,17 @@ function ensureLocalMermaid(): void {
     copyFileSync(src, dest)
     mermaidAvailable = true
   }
-  // else: mermaid not installed, HTML will show install instructions
 }
 
 function findMermaidJs(): string | null {
-  // Use module resolution (works regardless of npm/bun/pnpm, global or local)
   try {
     const entry = import.meta.resolve("mermaid")
     const entryPath = fileURLToPath(entry)
-    const distDir = dirname(entryPath) // .../mermaid/dist/
+    const distDir = dirname(entryPath)
     const minJs = join(distDir, "mermaid.min.js")
     if (existsSync(minJs)) return minJs
   } catch {}
 
-  // Fallback: search known global install paths
   const candidates: string[] = []
   if (process.env.APPDATA) {
     candidates.push(join(process.env.APPDATA, "npm", "node_modules", "mermaid", "dist", "mermaid.min.js"))
@@ -95,15 +90,13 @@ function renderMermaidBlocks(text: string): string {
 }
 
 function renderSingleBlock(mermaidCode: string): string {
-  const parts: string[] = []
-
-  // 1. Terminal ASCII preview
   try {
-    const ascii = renderMermaidAscii(mermaidCode)
-    parts.push("```\n" + ascii + "\n```")
+    const htmlPath = writeMermaidHtml(mermaidCode)
+    const fileUrl = "file:///" + htmlPath.replace(/\\/g, "/")
+    return `\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n\n📊 [在浏览器中查看此图](${fileUrl})\n`
   } catch (error) {
     const errorMessage = (error as Error).message || "Unknown error"
-    parts.push(
+    return (
       "```mermaid\n" +
       mermaidCode +
       "\n```\n<!-- mermaid render failed: " +
@@ -111,20 +104,9 @@ function renderSingleBlock(mermaidCode: string): string {
       " -->"
     )
   }
-
-  // 2. Browser HTML link
-  try {
-    const htmlPath = writeMermaidHtml(mermaidCode)
-    const fileUrl = "file:///" + htmlPath.replace(/\\/g, "/")
-    parts.push(`\n📊 [在浏览器中查看此图](${fileUrl})\n`)
-  } catch {
-    // silent fallback — ASCII already rendered
-  }
-
-  return parts.join("\n")
 }
 
-// ── HTML generator (fully offline) ──────────────────────────────────────
+// ── HTML generator ──────────────────────────────────────────────────────
 
 function writeMermaidHtml(mermaidCode: string): string {
   const timestamp = Date.now()
@@ -132,12 +114,10 @@ function writeMermaidHtml(mermaidCode: string): string {
   const filename = `mermaid-${timestamp}-${index}.html`
   const filePath = join(OUTPUT_DIR, filename)
 
-  // Only escape & and < (inside <pre>, > is safe and must stay as-is for mermaid arrows)
   const escapedCode = mermaidCode
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
 
-  // If mermaid found locally, relative <script> tag; else show setup hint
   const mermaidScript = mermaidAvailable
     ? `\n  <script src="mermaid.min.js"></script>`
     : ""
