@@ -21,6 +21,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Package
+*.tgz
+
 # Environment
 .env
 .env.local

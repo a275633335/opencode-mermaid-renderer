@@ -1,6 +1,6 @@
 {
   "name": "opencode-mermaid-renderer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Render mermaid diagrams in OpenCode — generates local HTML file for browser viewing",
   "keywords": [
     "opencode",
